@@ -1,5 +1,7 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.rating.RatingRequest;
+import com.example.backend.dto.rating.RatingResponse;
 import com.example.backend.dto.review.ReviewCreateRequest;
 import com.example.backend.dto.review.ReviewListResponse;
 import com.example.backend.dto.review.ReviewUpdateRequest;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,5 +58,17 @@ public class ReviewController {
     ) {
         Long userId = (Long) request.getAttribute("userId");
         reviewService.deleteReview(userId, id);
+    }
+
+    // レビュー評価（追加・更新）
+    @PostMapping("/{reviewId}/rating")
+    public RatingResponse rateReview(
+            HttpServletRequest request,
+            @PathVariable Long reviewId,
+            @RequestBody RatingRequest dto
+    ) {
+        Long userId = (Long) request.getAttribute("userId");
+
+        return reviewService.rateReview(userId, reviewId, dto);
     }
 }
