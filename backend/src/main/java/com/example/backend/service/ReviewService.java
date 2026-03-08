@@ -4,42 +4,88 @@ import com.example.backend.dto.rating.RatingRequest;
 import com.example.backend.dto.rating.RatingResponse;
 import com.example.backend.dto.review.ReviewCreateRequest;
 import com.example.backend.dto.review.ReviewListResponse;
+import com.example.backend.dto.review.ReviewResponse;
 import com.example.backend.dto.review.ReviewUpdateRequest;
 import com.example.backend.entity.ReviewEntity;
 import com.example.backend.entity.ReviewRatingEntity;
 import com.example.backend.repository.ReviewRatingRepository;
 import com.example.backend.repository.ReviewRepository;
+import com.example.backend.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ReviewRatingRepository reviewRatingRepository;
+    private final UserRepository userRepository;
 
     public ReviewService (
             ReviewRepository reviewRepository,
-            ReviewRatingRepository reviewRatingRepository
+            ReviewRatingRepository reviewRatingRepository,
+            UserRepository userRepository
     ) {
         this.reviewRepository = reviewRepository;
         this.reviewRatingRepository = reviewRatingRepository;
+        this.userRepository = userRepository;
     }
 
     // Review一覧取得
-    public ReviewListResponse getReviews () {}
+    public ReviewListResponse getReviews(int page, int size) {
+        // ページング情報の設定
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ReviewEntity> reviewPage = reviewRepository.findAllByOrderByCreatedAtDesc(pageable);
+
+        // EntityからReviewResponse(DTO)への変換
+        List<ReviewResponse> content = reviewPage.getContent().stream()
+                .map(review -> {
+                    String authorName = userRepository.findById(review.getUserId())
+                            .map(user -> user.getUsername())
+                            .orElse("Unknown");
+
+                    return ReviewResponse.builder()
+                            .id(review.getId())
+                            .title(review.getTitle())
+                            .content(review.getContent())
+                            .authorId(review.getUserId())
+                            .authorName(authorName)
+                            .createdAt(review.getCreatedAt())
+                            // 平均評価未実装のため仮値：0.0を入れている
+                            .averageRating(0.0)
+                            .ratingsCount(reviewRatingRepository.countByReviewId(review.getId()))
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // ReviewListResponse形式で返却
+        return ReviewListResponse.builder()
+                .content(content)
+                .page(reviewPage.getNumber())
+                .size(reviewPage.getSize())
+                .totalElements(reviewPage.getTotalElements())
+                .totalPages(reviewPage.getTotalPages())
+                .build();
+    }
 
     // Review作成
     public void createReview (Long userId, ReviewCreateRequest dto) {
         reviewRepository.findById(dto.getTargetId())
                 .orElseThrow(() -> new RuntimeException("Target not found"));
 
-        ReviewEntity review = new ReviewEntity();
-        review.setUserId(userId);
-        review.setTitle(dto.getTitle());
-        review.setContent(dto.getContent());
-        review.setTargetType(dto.getTargetType());
-        review.setTargetId(dto.getTargetId());
+        ReviewEntity review = ReviewEntity.builder()
+                .userId(userId)
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .targetType(dto.getTargetType())
+                .targetId(dto.getTargetId())
+                .build();
 
         reviewRepository.save(review);
     }
@@ -69,7 +115,7 @@ public class ReviewService {
         ReviewEntity review = reviewRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
-        if (review.getUserId() != userId) {
+        if (!review.getUserId().equals(userId)) {
             throw new RuntimeException("Forbidden");
         }
 
@@ -124,4 +170,3 @@ public class ReviewService {
     // Entity -> DTO
     // private ReviewListResponse toResponseDto () {}
 
-}

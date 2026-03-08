@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.dto.user.UserResponse;
 import com.example.backend.entity.UserEntity;
+import com.example.backend.repository.FollowRepository;
 import com.example.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -9,9 +10,11 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, FollowRepository followRepository) {
         this.userRepository = userRepository;
+        this.followRepository = followRepository;
     }
 
     // ログインユーザー取得
@@ -28,8 +31,8 @@ public class UserService {
                 .username(user.getUsername())
                 .bio(user.getBio())
                 .profileImageUrl(user.getProfileImageUrl())
-                .followersCount(0L)  //後に実装
-                .followingCount(0L)  //後に実装
+                .followersCount(followRepository.countByFollowedUserId(userId)) //後に実装
+                .followingCount(followRepository.countByFollowerUserId(userId))  //後に実装
                 .build();
     }
 

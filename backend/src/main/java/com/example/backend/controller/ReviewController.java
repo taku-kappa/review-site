@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,9 +27,14 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    // 一覧取得
+    // 一覧取得（クエリパラメータでページング制御）
     @GetMapping
-    public ReviewListResponse getReviews (HttpServletRequest request) {}
+    public ReviewListResponse getReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return reviewService.getReviews(page, size);
+    }
 
     // 作成
     public void createReview (
