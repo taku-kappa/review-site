@@ -6,6 +6,7 @@ import com.example.backend.dto.auth.RegisterRequest;
 import com.example.backend.entity.UserEntity;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.util.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class AuthService {
 
         // メール重複チェック
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException();
+            throw new RuntimeException("Email already registered");
         }
 
         // パスワードハッシュ化
@@ -42,21 +43,19 @@ public class AuthService {
                 .passwordHash(encodedPassword)
                 .build();
 
-        userRepository.save(user);
+        UserEntity savedUser = userRepository.save(user);
 
         // JWT発行
-        String token = JwtUtil.generateToken(user.getId());
+        String token = JwtUtil.generateToken(savedUser.getId());
 
         return AuthResponse.builder()
                 .accessToken(token)
-                .userId(user.getId())
-                .username(user.getUsername())
+                .userId(savedUser.getId())
+                .username(savedUser.getUsername())
                 .build();
     }
 
-    // =========================
     // ログイン
-    // =========================
     public AuthResponse login(LoginRequest request) {
 
         UserEntity user = userRepository.findByEmail(request.getEmail())
